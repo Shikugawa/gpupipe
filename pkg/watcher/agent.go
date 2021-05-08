@@ -25,10 +25,14 @@ type Agent struct {
 	memoryUsageLowWatermark int
 }
 
-func NewAgent() *Agent {
+func NewAgent(requestInterval, memoryUsageLowWatermark int) *Agent {
+	if memoryUsageLowWatermark > 100 {
+		memoryUsageLowWatermark = 100
+	}
+
 	return &Agent{
-		gpuInfoRequestInterval:  5 * time.Second,
-		memoryUsageLowWatermark: 10,
+		gpuInfoRequestInterval:  time.Duration(requestInterval) * time.Second,
+		memoryUsageLowWatermark: memoryUsageLowWatermark,
 	}
 }
 
@@ -40,7 +44,7 @@ func (w *Agent) Run(ch chan<- []int) {
 		}
 		var target []int
 		for _, info := range infos {
-			if info.MemoryUsage > w.memoryUsageLowWatermark {
+			if info.MemoryUsage <= w.memoryUsageLowWatermark {
 				target = append(target, info.Index)
 			}
 		}

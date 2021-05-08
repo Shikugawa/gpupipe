@@ -95,9 +95,9 @@ func (s *GreedyScheduler) Run() {
 	}
 }
 
-func NewGreedyScheduler(maxPendingQueueSize int) *GreedyScheduler {
+func NewGreedyScheduler(maxPendingQueueSize, gpuInfoRequestInterval, memoryUsageLowWatermark int) *GreedyScheduler {
 	targetGpuId := make(chan []int)
-	watcher := watcher.NewAgent()
+	watcher := watcher.NewAgent(gpuInfoRequestInterval, memoryUsageLowWatermark)
 	watcher.Run(targetGpuId)
 
 	return &GreedyScheduler{

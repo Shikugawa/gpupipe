@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package server
 
-import "github.com/Shikugawa/gpupipe/gpiped/cmd"
-
-func main() {
-	cmd.Execute()
+type processRequest struct {
+	Command   string `json:"command"`
+	TargetGpu []int  `json:"target_gpu"`
 }
