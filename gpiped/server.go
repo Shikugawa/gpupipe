@@ -1,8 +1,10 @@
-package gpiped
+package main
 
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/Shikugawa/gpupipe/pkg/scheduler"
 )
 
 type ProcessRequest struct {
@@ -10,11 +12,11 @@ type ProcessRequest struct {
 	TargetGpu []int  `json:"target_gpu"`
 }
 
-type Receiver struct {
-	schedular Scheduler
+type Server struct {
+	schedular scheduler.Scheduler
 }
 
-func (e *Receiver) HandlePublish(w http.ResponseWriter, r *http.Request) {
+func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	var request ProcessRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
@@ -27,8 +29,8 @@ func (e *Receiver) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func NewReceiver(s Scheduler) *Receiver {
-	return &Receiver{
+func NewServer(s scheduler.Scheduler) *Server {
+	return &Server{
 		schedular: s,
 	}
 }

@@ -1,4 +1,18 @@
-package gpiped
+// Copyright 2021 Rei Shimizu
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package gpu
 
 import (
 	"bytes"
@@ -24,7 +38,7 @@ type GpuInfo struct {
 	Index       int    `json:"index"`
 	Uuid        string `json:"uuid"`
 	Name        string `json:"name"`
-	timestamp   string `json:"timestamp"`
+	Timestamp   string `json:"timestamp"`
 	TotalMemory int64  `json:"memory.total"`
 	MemoryFree  int64  `json:"memory.free"`
 	MemoryUsed  int64  `json:"memory.used"`
@@ -33,7 +47,7 @@ type GpuInfo struct {
 }
 
 func GetGpuInfo() ([]GpuInfo, error) {
-	cmd := exec.Command("nvidia-smi", fmt.Sprintf("--query-gpu=%s", strings.Join(query, ","), "--format=csv,noheader,nounits"))
+	cmd := exec.Command("nvidia-smi", fmt.Sprintf("--query-gpu=%s", strings.Join(query, ",")), "--format=csv,noheader,nounits")
 
 	var outbuf, errbuf bytes.Buffer
 	cmd.Stdout = &outbuf
@@ -42,7 +56,6 @@ func GetGpuInfo() ([]GpuInfo, error) {
 	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-
 	if errbuf.Len() != 0 {
 		return nil, fmt.Errorf(errbuf.String())
 	}
@@ -52,13 +65,12 @@ func GetGpuInfo() ([]GpuInfo, error) {
 	var infos []GpuInfo
 
 	for _, r := range result {
-		var infomap map[string]string
+		infomap := make(map[string]string)
 		line := strings.Split(r, ", ")
 
 		for i := 0; i < len(line); i++ {
 			infomap[query[i]] = line[i]
 		}
-
 		infomapbytes, err := json.Marshal(infomap)
 		if err != nil {
 			return nil, err
