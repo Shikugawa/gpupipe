@@ -15,6 +15,7 @@
 package scheduler
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -29,12 +30,28 @@ type GreedyScheduler struct {
 	maxPendingQueueSize int
 }
 
-func (s *GreedyScheduler) Publish(command string, gpuId []int) error {
+func (s *GreedyScheduler) Publish(rootpath, command string, gpuId []int) error {
 	if len(s.queue) >= s.maxPendingQueueSize {
 		return fmt.Errorf("failed to publish pending process with queue size overflow")
 	}
-	s.queue = append(s.queue, NewProcess(command, gpuId))
+	s.queue = append(s.queue, NewProcess(rootpath, command, gpuId))
 	return nil
+}
+
+func (s *GreedyScheduler) List() ([]byte, error) {
+	var processSet PendingProcessSet
+	processSet.ProcessSet = make([]Process, 0)
+
+	for _, queuedProcess := range s.queue {
+		processSet.ProcessSet = append(processSet.ProcessSet, *queuedProcess)
+	}
+
+	b, err := json.Marshal(processSet)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func (s *GreedyScheduler) Run() {
@@ -45,6 +62,7 @@ func (s *GreedyScheduler) Run() {
 				if queuedProcess.ProcessState != Pending {
 					continue
 				}
+
 				canSpawn := true
 				for _, requestGpuId := range queuedProcess.GpuId {
 					requestGpuIdAvailable := false
@@ -82,10 +100,12 @@ func (s *GreedyScheduler) Run() {
 
 			shouldSpawnProcessIdx := canSpawnProcessIdx[0]
 			s.queue[shouldSpawnProcessIdx].ProcessState = Active
+
 			if err := s.queue[shouldSpawnProcessIdx].Spawn(); err != nil {
 				s.queue[shouldSpawnProcessIdx].ProcessState = CanSpawn
 				log.Println("failed to spawn")
 			}
+
 			for _, queuedProcess := range s.queue {
 				if queuedProcess.ProcessState == CanSpawn {
 					queuedProcess.ProcessState = Pending
@@ -98,10 +118,10 @@ func (s *GreedyScheduler) Run() {
 func NewGreedyScheduler(maxPendingQueueSize, gpuInfoRequestInterval, memoryUsageLowWatermark int) *GreedyScheduler {
 	targetGpuId := make(chan []int)
 	watcher := watcher.NewAgent(gpuInfoRequestInterval, memoryUsageLowWatermark)
-	watcher.Run(targetGpuId)
+	go watcher.Run(targetGpuId)
 
 	return &GreedyScheduler{
-		queue:               make([]*Process, maxPendingQueueSize),
+		queue:               make([]*Process, 0),
 		watcher:             watcher,
 		targetGpuId:         targetGpuId,
 		maxPendingQueueSize: maxPendingQueueSize,

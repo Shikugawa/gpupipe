@@ -15,6 +15,7 @@
 package scheduler
 
 import (
+	"os"
 	"os/exec"
 	"time"
 )
@@ -28,14 +29,34 @@ const (
 	Finished // TODO: 今の実装だとプロセス自体が終了しても永遠にFinishedにならない
 )
 
+func ProcessStateToString(state ProcessState) string {
+	if state == Pending {
+		return "Pending"
+	} else if state == CanSpawn {
+		return "CanSpawn"
+	} else if state == Active {
+		return "Active"
+	} else if state == Finished {
+		return "Finished"
+	} else {
+		return ""
+	}
+}
+
 type Process struct {
-	command      string
-	issuedTime   time.Time
-	GpuId        []int
-	ProcessState ProcessState
+	rootPath     string       `json:"rootpath"`
+	command      string       `json:"command"`
+	issuedTime   time.Time    `json:"issued_time"`
+	GpuId        []int        `json:"gpu_id"`
+	ProcessState ProcessState `json:"process_state"`
 }
 
 func (p *Process) Spawn() error {
+	err := os.Chdir(p.rootPath)
+	if err != nil {
+		return err
+	}
+
 	cmd := exec.Command(p.command)
 	if err := cmd.Start(); err != nil {
 		return err
@@ -44,8 +65,9 @@ func (p *Process) Spawn() error {
 	return nil
 }
 
-func NewProcess(command string, gpuId []int) *Process {
+func NewProcess(rootpath, command string, gpuId []int) *Process {
 	return &Process{
+		rootPath:     rootpath,
 		command:      command,
 		issuedTime:   time.Now(),
 		GpuId:        gpuId,

@@ -31,11 +31,21 @@ func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
 	}
 
-	if err := e.schedular.Publish(request.Command, request.TargetGpu); err != nil {
+	if err := e.schedular.Publish(request.RootPath, request.Command, request.TargetGpu); err != nil {
 		http.Error(w, "Failed to publish process", http.StatusInternalServerError)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (e *Server) HandleList(w http.ResponseWriter, r *http.Request) {
+	b, err := e.schedular.List()
+	if err != nil {
+		http.Error(w, "Failed to fetch process", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write(b)
 }
 
 func NewServer(s scheduler.Scheduler) *Server {

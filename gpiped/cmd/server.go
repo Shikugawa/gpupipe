@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package cmd
 
 import (
@@ -32,10 +33,14 @@ var (
 		Short: "Create network environment from config",
 		Run: func(cmd *cobra.Command, args []string) {
 			sched := scheduler.NewGreedyScheduler(int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark))
+			go sched.Run()
 			srv := server.NewServer(sched)
 
 			http.HandleFunc("/publish", srv.HandlePublish)
+			http.HandleFunc("/list", srv.HandleList)
 			http.ListenAndServe("0.0.0.0:8000", nil)
+
+			// TODO: cleanup pending processes
 		},
 	}
 )

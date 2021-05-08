@@ -15,6 +15,7 @@
 package server
 
 type processRequest struct {
+	RootPath  string `json:rootpath`
 	Command   string `json:"command"`
 	TargetGpu []int  `json:"target_gpu"`
 }

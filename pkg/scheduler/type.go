@@ -14,8 +14,6 @@
 
 package scheduler
 
-type Scheduler interface {
-	Publish(rootpath string, command string, gpuId []int) error
-	List() ([]byte, error)
-	Run()
+type PendingProcessSet struct {
+	ProcessSet []Process `json:"process"`
 }
