@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package scheduler
+package types
 
-type PendingProcessSet struct {
-	ProcessSet []Process `json:"process"`
+type ProcessPublishRequest struct {
+	RootPath  string `json:"rootpath"`
+	Command   string `json:"command"`
+	TargetGpu []int  `json:"target_gpu"`
 }

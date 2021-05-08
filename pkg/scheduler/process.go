@@ -44,20 +44,20 @@ func ProcessStateToString(state ProcessState) string {
 }
 
 type Process struct {
-	rootPath     string       `json:"rootpath"`
-	command      string       `json:"command"`
-	issuedTime   time.Time    `json:"issued_time"`
+	RootPath     string       `json:"rootpath"`
+	Command      string       `json:"command"`
+	IssuedTime   time.Time    `json:"issued_time"`
 	GpuId        []int        `json:"gpu_id"`
 	ProcessState ProcessState `json:"process_state"`
 }
 
 func (p *Process) Spawn() error {
-	err := os.Chdir(p.rootPath)
+	err := os.Chdir(p.RootPath)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command(p.command)
+	cmd := exec.Command(p.Command)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -67,9 +67,9 @@ func (p *Process) Spawn() error {
 
 func NewProcess(rootpath, command string, gpuId []int) *Process {
 	return &Process{
-		rootPath:     rootpath,
-		command:      command,
-		issuedTime:   time.Now(),
+		RootPath:     rootpath,
+		Command:      command,
+		IssuedTime:   time.Now(),
 		GpuId:        gpuId,
 		ProcessState: Pending,
 	}

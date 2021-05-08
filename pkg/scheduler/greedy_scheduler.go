@@ -39,11 +39,11 @@ func (s *GreedyScheduler) Publish(rootpath, command string, gpuId []int) error {
 }
 
 func (s *GreedyScheduler) List() ([]byte, error) {
-	var processSet PendingProcessSet
-	processSet.ProcessSet = make([]Process, 0)
+	processSet := make(map[string][]Process, 0)
+	processSet["processes"] = make([]Process, 0)
 
 	for _, queuedProcess := range s.queue {
-		processSet.ProcessSet = append(processSet.ProcessSet, *queuedProcess)
+		processSet["processes"] = append(processSet["processes"], *queuedProcess)
 	}
 
 	b, err := json.Marshal(processSet)
@@ -100,7 +100,7 @@ func (s *GreedyScheduler) Run() {
 			}
 
 			sort.Slice(canSpawnProcessIdx, func(i, j int) bool {
-				return s.queue[i].issuedTime.Before(s.queue[j].issuedTime)
+				return s.queue[i].IssuedTime.Before(s.queue[j].IssuedTime)
 			})
 
 			shouldSpawnProcessIdx := canSpawnProcessIdx[0]
