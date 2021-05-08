@@ -30,7 +30,7 @@ type GreedyScheduler struct {
 	maxPendingQueueSize int
 }
 
-func (s *GreedyScheduler) Publish(rootpath, command string, gpuId []int) error {
+func (s *GreedyScheduler) Publish(rootpath string, command []string, gpuId []int) error {
 	if len(s.queue) >= s.maxPendingQueueSize {
 		return fmt.Errorf("failed to publish pending process with queue size overflow")
 	}
@@ -108,7 +108,7 @@ func (s *GreedyScheduler) Run() {
 
 			if err := s.queue[shouldSpawnProcessIdx].Spawn(); err != nil {
 				s.queue[shouldSpawnProcessIdx].ProcessState = CanSpawn
-				log.Println("failed to spawn")
+				log.Println("failed to spawn", err)
 			}
 
 			for _, queuedProcess := range s.queue {

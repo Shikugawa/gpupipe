@@ -15,7 +15,7 @@
 package scheduler
 
 type Scheduler interface {
-	Publish(rootpath string, command string, gpuId []int) error
+	Publish(rootpath string, command []string, gpuId []int) error
 	List() ([]byte, error)
 	Run()
 }

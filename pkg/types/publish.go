@@ -15,7 +15,7 @@
 package types
 
 type ProcessPublishRequest struct {
-	RootPath  string `json:"rootpath"`
-	Command   string `json:"command"`
-	TargetGpu []int  `json:"target_gpu"`
+	RootPath  string   `json:"rootpath"`
+	Command   []string `json:"command"`
+	TargetGpu []int    `json:"target_gpu"`
 }

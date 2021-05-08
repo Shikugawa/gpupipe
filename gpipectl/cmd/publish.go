@@ -41,6 +41,7 @@ var (
 
 			var request types.ProcessPublishRequest
 			if err := json.NewDecoder(bytes.NewBuffer(target)).Decode(&request); err != nil {
+				fmt.Println(err)
 				return
 			}
 

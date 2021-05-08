@@ -15,6 +15,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"time"
@@ -45,19 +46,21 @@ func ProcessStateToString(state ProcessState) string {
 
 type Process struct {
 	RootPath     string       `json:"rootpath"`
-	Command      string       `json:"command"`
+	Command      []string     `json:"command"`
 	IssuedTime   time.Time    `json:"issued_time"`
 	GpuId        []int        `json:"gpu_id"`
 	ProcessState ProcessState `json:"process_state"`
 }
 
 func (p *Process) Spawn() error {
-	err := os.Chdir(p.RootPath)
-	if err != nil {
-		return err
-	}
+	nullFd, _ := os.Open(os.DevNull)
 
-	cmd := exec.Command(p.Command)
+	cmd := exec.Command(p.Command[0], p.Command[1:]...)
+	fmt.Println(cmd.String())
+	cmd.Dir = p.RootPath
+	cmd.Stdout = nullFd
+	cmd.Stderr = nullFd
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -65,7 +68,7 @@ func (p *Process) Spawn() error {
 	return nil
 }
 
-func NewProcess(rootpath, command string, gpuId []int) *Process {
+func NewProcess(rootpath string, command []string, gpuId []int) *Process {
 	return &Process{
 		RootPath:     rootpath,
 		Command:      command,
