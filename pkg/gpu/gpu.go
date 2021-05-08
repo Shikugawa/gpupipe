@@ -16,9 +16,9 @@ package gpu
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -60,26 +60,24 @@ func GetGpuInfo() ([]GpuInfo, error) {
 		return nil, fmt.Errorf(errbuf.String())
 	}
 
-	result := strings.Split(outbuf.String(), "\n")
+	resultStr := strings.TrimSuffix(outbuf.String(), "\n")
+	result := strings.Split(resultStr, "\n")
 
 	var infos []GpuInfo
 
 	for _, r := range result {
-		infomap := make(map[string]string)
-		line := strings.Split(r, ", ")
-
-		for i := 0; i < len(line); i++ {
-			infomap[query[i]] = line[i]
-		}
-		infomapbytes, err := json.Marshal(infomap)
-		if err != nil {
-			return nil, err
-		}
-
 		var info GpuInfo
-		if err := json.Unmarshal(infomapbytes, &info); err != nil {
-			return nil, err
-		}
+		rawInfo := strings.Split(r, ", ")
+
+		info.Index, _ = strconv.Atoi(rawInfo[0])
+		info.Uuid = rawInfo[1]
+		info.Name = rawInfo[2]
+		info.Timestamp = rawInfo[3]
+		info.TotalMemory, _ = strconv.ParseInt(rawInfo[4], 10, 64)
+		info.MemoryFree, _ = strconv.ParseInt(rawInfo[5], 10, 64)
+		info.MemoryUsed, _ = strconv.ParseInt(rawInfo[6], 10, 64)
+		info.GpuUsage, _ = strconv.Atoi(rawInfo[7])
+		info.MemoryUsage, _ = strconv.Atoi(rawInfo[8])
 
 		infos = append(infos, info)
 	}

@@ -94,6 +94,11 @@ func (s *GreedyScheduler) Run() {
 				}
 			}
 
+			if len(canSpawnProcessIdx) == 0 {
+				log.Printf("no ready process")
+				continue
+			}
+
 			sort.Slice(canSpawnProcessIdx, func(i, j int) bool {
 				return s.queue[i].issuedTime.Before(s.queue[j].issuedTime)
 			})

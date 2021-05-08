@@ -15,6 +15,7 @@
 package watcher
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Shikugawa/gpupipe/pkg/gpu"
@@ -40,8 +41,10 @@ func (w *Agent) Run(ch chan<- []int) {
 	for {
 		infos, err := gpu.GetGpuInfo()
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
+
 		var target []int
 		for _, info := range infos {
 			if info.MemoryUsage <= w.memoryUsageLowWatermark {
