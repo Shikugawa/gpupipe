@@ -15,8 +15,13 @@
 package cmd
 
 import (
-	"net/http"
+	"context"
+	"log"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/Shikugawa/gpupipe/pkg/scheduler"
 	"github.com/Shikugawa/gpupipe/pkg/scheduler/plugin"
@@ -37,13 +42,22 @@ var (
 			sched := scheduler.NewScheduler(
 				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark), plugin.NewGreedyPlugin())
 			go sched.Run()
-			srv := server.NewServer(sched)
 
-			http.HandleFunc("/publish", srv.HandlePublish)
-			http.HandleFunc("/list", srv.HandleList)
-			http.ListenAndServe("0.0.0.0:"+strconv.Itoa(int(port)), nil)
+			srv := server.NewServer(sched).Start(strconv.Itoa(int(port)))
 
-			// TODO: cleanup pending processes
+			sig := make(chan os.Signal, 1)
+			signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
+			<-sig
+
+			sched.TerminateActiveProcess()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			if err := srv.Shutdown(ctx); err != nil {
+				log.Println("failed to graceful shutdown server:", err)
+				return
+			}
 		},
 	}
 )

@@ -16,6 +16,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/Shikugawa/gpupipe/pkg/scheduler"
@@ -26,7 +27,7 @@ type Server struct {
 	schedular *scheduler.Scheduler
 }
 
-func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
+func (e *Server) handlePublish(w http.ResponseWriter, r *http.Request) {
 	var request types.ProcessPublishRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
@@ -39,7 +40,7 @@ func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (e *Server) HandleList(w http.ResponseWriter, r *http.Request) {
+func (e *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	b, err := e.schedular.List()
 	if err != nil {
 		http.Error(w, "Failed to fetch process", http.StatusInternalServerError)
@@ -47,6 +48,27 @@ func (e *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write(b)
+}
+
+func (s *Server) Start(port string) *http.Server {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/publish", s.handlePublish)
+	mux.HandleFunc("/list", s.handleList)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Println("Admin server started...")
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalln("Server closed with error:", err)
+		}
+	}()
+
+	return srv
 }
 
 func NewServer(s *scheduler.Scheduler) *Server {

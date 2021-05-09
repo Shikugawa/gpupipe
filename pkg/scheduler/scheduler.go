@@ -59,6 +59,19 @@ func (s *Scheduler) List() ([]byte, error) {
 	return b, nil
 }
 
+func (s *Scheduler) TerminateActiveProcess() {
+	for e := s.Queue.Front(); e != nil; e = e.Next() {
+		queuedProcess := e.Value.(*process.Process)
+
+		if queuedProcess.ProcessState == process.Active {
+			if err := queuedProcess.Terminate(); err != nil {
+				log.Println(err)
+				continue
+			}
+		}
+	}
+}
+
 func (s *Scheduler) Run() {
 	for {
 		select {

@@ -15,9 +15,11 @@
 package process
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/Shikugawa/gpupipe/pkg/types"
@@ -26,6 +28,7 @@ import (
 
 type Process struct {
 	Id           string       `json:"id"`
+	Pid          int          `json:"pid"`
 	RootPath     string       `json:"rootpath"`
 	Command      []string     `json:"command"`
 	IssuedTime   time.Time    `json:"issued_time"`
@@ -75,9 +78,21 @@ func (p *Process) Spawn(ch *chan bool) {
 		*ch <- false
 	}
 
+	p.Pid = cmd.Process.Pid
+
 	// TODO: プロセスが異常終了した場合はfalseにしたい
 	cmd.Wait()
 	*ch <- true
+}
+
+func (p *Process) Terminate() error {
+	if p.ProcessState != Active || p.Pid == 0 {
+		return fmt.Errorf("this process has stopped already")
+	}
+	if err := syscall.Kill(p.Pid, syscall.SIGTERM); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewProcess(r *types.ProcessPublishRequest) *Process {
