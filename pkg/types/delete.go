@@ -12,23 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugin
+package types
 
-import (
-	"sort"
-
-	"github.com/Shikugawa/gpupipe/pkg/process"
-)
-
-type GreedyPlugin struct{}
-
-func (g *GreedyPlugin) Select(canSpawnProcess []*process.Process) *process.Process {
-	sort.Slice(canSpawnProcess, func(i, j int) bool {
-		return canSpawnProcess[i].IssuedTime.Before(canSpawnProcess[j].IssuedTime)
-	})
-	return canSpawnProcess[0]
-}
-
-func NewGreedyPlugin() *GreedyPlugin {
-	return &GreedyPlugin{}
+type ProcessDeleteRequest struct {
+	Id string `json:"id"`
 }

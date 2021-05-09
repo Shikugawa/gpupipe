@@ -40,6 +40,19 @@ func (e *Server) handlePublish(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+func (e *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
+	var request types.ProcessDeleteRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
+	}
+
+	if !e.schedular.Delete(request.Id) {
+		http.Error(w, "Failed to publish process", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
 func (e *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	b, err := e.schedular.List()
 	if err != nil {
@@ -55,6 +68,7 @@ func (s *Server) Start(port string) *http.Server {
 
 	mux.HandleFunc("/publish", s.handlePublish)
 	mux.HandleFunc("/list", s.handleList)
+	mux.HandleFunc("/delete", s.handleDelete)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

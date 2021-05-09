@@ -43,7 +43,7 @@ func (s *Scheduler) Publish(r *types.ProcessPublishRequest) error {
 }
 
 func (s *Scheduler) List() ([]byte, error) {
-	processSet := make(map[string][]process.Process, 0)
+	processSet := make(map[string][]process.Process)
 	processSet["processes"] = make([]process.Process, 0)
 
 	for e := s.Queue.Front(); e != nil; e = e.Next() {
@@ -59,85 +59,98 @@ func (s *Scheduler) List() ([]byte, error) {
 	return b, nil
 }
 
-func (s *Scheduler) TerminateActiveProcess() {
+func (s *Scheduler) Delete(id string) bool {
 	for e := s.Queue.Front(); e != nil; e = e.Next() {
 		queuedProcess := e.Value.(*process.Process)
-
-		if queuedProcess.ProcessState == process.Active {
-			if err := queuedProcess.Terminate(); err != nil {
-				log.Println(err)
-				continue
-			}
+		if queuedProcess.Id == id {
+			s.terminateActiveProcess(queuedProcess)
+			s.Queue.Remove(e)
+			return true
 		}
 	}
+	return false
+}
+
+func (s *Scheduler) TerminateAllActiveProcess() {
+	for e := s.Queue.Front(); e != nil; e = e.Next() {
+		s.terminateActiveProcess(e.Value.(*process.Process))
+	}
+}
+
+func (s *Scheduler) terminateActiveProcess(p *process.Process) error {
+	if p.ProcessState == process.Active {
+		if err := p.Terminate(); err != nil {
+			return err
+		}
+		p.ProcessState = process.Finished
+	}
+	return nil
 }
 
 func (s *Scheduler) Run() {
 	for {
-		select {
-		case availableGpuIds := <-s.TargetGpuId:
-			for e := s.Queue.Front(); e != nil; e = e.Next() {
-				queuedProcess := e.Value.(*process.Process)
+		availableGpuIds := <-s.TargetGpuId
+		for e := s.Queue.Front(); e != nil; e = e.Next() {
+			queuedProcess := e.Value.(*process.Process)
 
-				if queuedProcess.ProcessState != process.Pending {
-					if queuedProcess.ProcessState == process.Finished {
-						s.Queue.Remove(e)
-					}
-					continue
+			if queuedProcess.ProcessState != process.Pending {
+				if queuedProcess.ProcessState == process.Finished {
+					s.Queue.Remove(e)
 				}
+				continue
+			}
 
-				canSpawn := true
-				for _, requestGpuId := range queuedProcess.GpuId {
-					requestGpuIdAvailable := false
-					for _, availableGpuId := range availableGpuIds {
-						if availableGpuId == requestGpuId {
-							requestGpuIdAvailable = true
-							break
-						}
-					}
-
-					if !requestGpuIdAvailable {
-						log.Printf("requested GPU ID %d has not be available", requestGpuId)
-						canSpawn = false
+			canSpawn := true
+			for _, requestGpuId := range queuedProcess.GpuId {
+				requestGpuIdAvailable := false
+				for _, availableGpuId := range availableGpuIds {
+					if availableGpuId == requestGpuId {
+						requestGpuIdAvailable = true
 						break
 					}
 				}
 
-				if !canSpawn {
-					log.Printf("process can't be executed")
-					continue
-				}
-				queuedProcess.ProcessState = process.CanSpawn
-			}
-
-			var canSpawnProcess []*process.Process
-
-			for e := s.Queue.Front(); e != nil; e = e.Next() {
-				queuedProcess := e.Value.(*process.Process)
-
-				if queuedProcess.ProcessState == process.CanSpawn {
-					canSpawnProcess = append(canSpawnProcess, queuedProcess)
+				if !requestGpuIdAvailable {
+					log.Printf("requested GPU ID %d has not be available", requestGpuId)
+					canSpawn = false
+					break
 				}
 			}
 
-			if len(canSpawnProcess) == 0 {
-				log.Printf("no ready process")
+			if !canSpawn {
+				log.Printf("process can't be executed")
 				continue
 			}
+			queuedProcess.ProcessState = process.CanSpawn
+		}
 
-			shouldSpawnProcess := s.SchedulePlugin.Select(canSpawnProcess)
-			shouldSpawnProcess.ProcessState = process.Active
+		var canSpawnProcess []*process.Process
 
-			ch := make(chan bool)
-			go shouldSpawnProcess.Spawn(&ch)
-			s.ProcessEventHandler.AddTaskStatusChannel(shouldSpawnProcess.Id, &ch)
+		for e := s.Queue.Front(); e != nil; e = e.Next() {
+			queuedProcess := e.Value.(*process.Process)
 
-			for e := s.Queue.Front(); e != nil; e = e.Next() {
-				queuedProcess := e.Value.(*process.Process)
+			if queuedProcess.ProcessState == process.CanSpawn {
+				canSpawnProcess = append(canSpawnProcess, queuedProcess)
+			}
+		}
 
-				if queuedProcess.ProcessState == process.CanSpawn {
-					queuedProcess.ProcessState = process.Pending
-				}
+		if len(canSpawnProcess) == 0 {
+			log.Printf("no ready process")
+			continue
+		}
+
+		shouldSpawnProcess := s.SchedulePlugin.Select(canSpawnProcess)
+		shouldSpawnProcess.ProcessState = process.Active
+
+		ch := make(chan bool)
+		go shouldSpawnProcess.Spawn(&ch)
+		s.ProcessEventHandler.AddTaskStatusChannel(shouldSpawnProcess.Id, &ch)
+
+		for e := s.Queue.Front(); e != nil; e = e.Next() {
+			queuedProcess := e.Value.(*process.Process)
+
+			if queuedProcess.ProcessState == process.CanSpawn {
+				queuedProcess.ProcessState = process.Pending
 			}
 		}
 	}

@@ -12,27 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package plugin
 
-type ProcessState int
+import (
+	"sort"
 
-const (
-	Pending ProcessState = iota
-	CanSpawn
-	Active
-	Finished
+	"github.com/Shikugawa/gpupipe/pkg/process"
 )
 
-func ProcessStateToString(state ProcessState) string {
-	if state == Pending {
-		return "Pending"
-	} else if state == CanSpawn {
-		return "CanSpawn"
-	} else if state == Active {
-		return "Active"
-	} else if state == Finished {
-		return "Finished"
-	} else {
-		return ""
-	}
+type FifoPlugin struct{}
+
+func (g *FifoPlugin) Select(canSpawnProcess []*process.Process) *process.Process {
+	sort.Slice(canSpawnProcess, func(i, j int) bool {
+		return canSpawnProcess[i].IssuedTime.Before(canSpawnProcess[j].IssuedTime)
+	})
+	return canSpawnProcess[0]
+}
+
+func NewFifoPlugin() *FifoPlugin {
+	return &FifoPlugin{}
 }

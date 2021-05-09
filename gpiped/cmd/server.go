@@ -40,7 +40,7 @@ var (
 		Short: "run gpiped server",
 		Run: func(cmd *cobra.Command, args []string) {
 			sched := scheduler.NewScheduler(
-				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark), plugin.NewGreedyPlugin())
+				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark), plugin.NewFifoPlugin())
 			go sched.Run()
 
 			srv := server.NewServer(sched).Start(strconv.Itoa(int(port)))
@@ -49,7 +49,7 @@ var (
 			signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT)
 			<-sig
 
-			sched.TerminateActiveProcess()
+			sched.TerminateAllActiveProcess()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
