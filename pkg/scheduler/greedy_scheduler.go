@@ -15,6 +15,7 @@
 package scheduler
 
 import (
+	"container/list"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -26,7 +27,7 @@ import (
 )
 
 type GreedyScheduler struct {
-	queue               []*process.Process
+	queue               *list.List
 	watcher             *watcher.Agent
 	targetGpuId         chan []int
 	maxPendingQueueSize int
@@ -34,10 +35,10 @@ type GreedyScheduler struct {
 }
 
 func (s *GreedyScheduler) Publish(r *types.ProcessPublishRequest) error {
-	if len(s.queue) >= s.maxPendingQueueSize {
+	if s.queue.Len() >= s.maxPendingQueueSize {
 		return fmt.Errorf("failed to publish pending process with queue size overflow")
 	}
-	s.queue = append(s.queue, process.NewProcess(r))
+	s.queue.PushBack(process.NewProcess(r))
 	return nil
 }
 
@@ -45,7 +46,8 @@ func (s *GreedyScheduler) List() ([]byte, error) {
 	processSet := make(map[string][]process.Process, 0)
 	processSet["processes"] = make([]process.Process, 0)
 
-	for _, queuedProcess := range s.queue {
+	for e := s.queue.Front(); e != nil; e = e.Next() {
+		queuedProcess := e.Value.(*process.Process)
 		processSet["processes"] = append(processSet["processes"], *queuedProcess)
 	}
 
@@ -61,8 +63,13 @@ func (s *GreedyScheduler) Run() {
 	for {
 		select {
 		case availableGpuIds := <-s.targetGpuId:
-			for _, queuedProcess := range s.queue {
+			for e := s.queue.Front(); e != nil; e = e.Next() {
+				queuedProcess := e.Value.(*process.Process)
+
 				if queuedProcess.ProcessState != process.Pending {
+					if queuedProcess.ProcessState == process.Finished {
+						s.queue.Remove(e)
+					}
 					continue
 				}
 
@@ -90,30 +97,35 @@ func (s *GreedyScheduler) Run() {
 				queuedProcess.ProcessState = process.CanSpawn
 			}
 
-			var canSpawnProcessIdx []int
-			for i, queuedProcess := range s.queue {
+			var canSpawnProcess []*process.Process
+
+			for e := s.queue.Front(); e != nil; e = e.Next() {
+				queuedProcess := e.Value.(*process.Process)
+
 				if queuedProcess.ProcessState == process.CanSpawn {
-					canSpawnProcessIdx = append(canSpawnProcessIdx, i)
+					canSpawnProcess = append(canSpawnProcess, queuedProcess)
 				}
 			}
 
-			if len(canSpawnProcessIdx) == 0 {
+			if len(canSpawnProcess) == 0 {
 				log.Printf("no ready process")
 				continue
 			}
 
-			sort.Slice(canSpawnProcessIdx, func(i, j int) bool {
-				return s.queue[i].IssuedTime.Before(s.queue[j].IssuedTime)
+			sort.Slice(canSpawnProcess, func(i, j int) bool {
+				return canSpawnProcess[i].IssuedTime.Before(canSpawnProcess[j].IssuedTime)
 			})
 
-			shouldSpawnProcessIdx := canSpawnProcessIdx[0]
-			s.queue[shouldSpawnProcessIdx].ProcessState = process.Active
+			shouldSpawnProcess := canSpawnProcess[0]
+			shouldSpawnProcess.ProcessState = process.Active
 
 			ch := make(chan bool)
-			go s.queue[shouldSpawnProcessIdx].Spawn(&ch)
-			s.ProcessEventHandler.AddTaskStatusChannel(s.queue[shouldSpawnProcessIdx].Id, &ch)
+			go shouldSpawnProcess.Spawn(&ch)
+			s.ProcessEventHandler.AddTaskStatusChannel(shouldSpawnProcess.Id, &ch)
 
-			for _, queuedProcess := range s.queue {
+			for e := s.queue.Front(); e != nil; e = e.Next() {
+				queuedProcess := e.Value.(*process.Process)
+
 				if queuedProcess.ProcessState == process.CanSpawn {
 					queuedProcess.ProcessState = process.Pending
 				}
@@ -123,7 +135,9 @@ func (s *GreedyScheduler) Run() {
 }
 
 func (s *GreedyScheduler) OnSuccess(id string) {
-	for _, p := range s.queue {
+	for e := s.queue.Front(); e != nil; e = e.Next() {
+		p := e.Value.(*process.Process)
+
 		if p.Id == id {
 			p.ProcessState = process.Finished
 			log.Printf("finish to exec %s", id)
@@ -133,7 +147,9 @@ func (s *GreedyScheduler) OnSuccess(id string) {
 }
 
 func (s *GreedyScheduler) OnError(id string) {
-	for _, p := range s.queue {
+	for e := s.queue.Front(); e != nil; e = e.Next() {
+		p := e.Value.(*process.Process)
+
 		if p.Id == id {
 			p.ProcessState = process.CanSpawn
 			log.Printf("failed to spawn %s", id)
@@ -148,7 +164,7 @@ func NewGreedyScheduler(maxPendingQueueSize, gpuInfoRequestInterval, memoryUsage
 	go watcher.Run(targetGpuId)
 
 	scheduler := GreedyScheduler{
-		queue:               make([]*process.Process, 0),
+		queue:               list.New(),
 		watcher:             watcher,
 		targetGpuId:         targetGpuId,
 		maxPendingQueueSize: maxPendingQueueSize,
