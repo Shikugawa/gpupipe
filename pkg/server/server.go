@@ -23,7 +23,7 @@ import (
 )
 
 type Server struct {
-	schedular scheduler.Scheduler
+	schedular *scheduler.Scheduler
 }
 
 func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func (e *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func NewServer(s scheduler.Scheduler) *Server {
+func NewServer(s *scheduler.Scheduler) *Server {
 	return &Server{
 		schedular: s,
 	}

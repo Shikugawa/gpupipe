@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/Shikugawa/gpupipe/pkg/scheduler"
+	"github.com/Shikugawa/gpupipe/pkg/scheduler/plugin"
 	"github.com/Shikugawa/gpupipe/pkg/server"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,8 @@ var (
 		Use:   "run",
 		Short: "run gpiped server",
 		Run: func(cmd *cobra.Command, args []string) {
-			sched := scheduler.NewGreedyScheduler(int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark))
+			sched := scheduler.NewScheduler(
+				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark), plugin.NewGreedyPlugin())
 			go sched.Run()
 			srv := server.NewServer(sched)
 

@@ -24,9 +24,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// finish state
-// delete task command
-// terminate
 type Process struct {
 	Id           string       `json:"id"`
 	RootPath     string       `json:"rootpath"`
