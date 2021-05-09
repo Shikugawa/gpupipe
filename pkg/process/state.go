@@ -12,14 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package scheduler
-
-import (
-	"fmt"
-	"os"
-	"os/exec"
-	"time"
-)
+package process
 
 type ProcessState int
 
@@ -27,6 +20,7 @@ const (
 	Pending ProcessState = iota
 	CanSpawn
 	Active
+	FinishedWithError
 	Finished // TODO: 今の実装だとプロセス自体が終了しても永遠にFinishedにならない
 )
 
@@ -41,39 +35,5 @@ func ProcessStateToString(state ProcessState) string {
 		return "Finished"
 	} else {
 		return ""
-	}
-}
-
-type Process struct {
-	RootPath     string       `json:"rootpath"`
-	Command      []string     `json:"command"`
-	IssuedTime   time.Time    `json:"issued_time"`
-	GpuId        []int        `json:"gpu_id"`
-	ProcessState ProcessState `json:"process_state"`
-}
-
-func (p *Process) Spawn() error {
-	nullFd, _ := os.Open(os.DevNull)
-
-	cmd := exec.Command(p.Command[0], p.Command[1:]...)
-	fmt.Println(cmd.String())
-	cmd.Dir = p.RootPath
-	cmd.Stdout = nullFd
-	cmd.Stderr = nullFd
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func NewProcess(rootpath string, command []string, gpuId []int) *Process {
-	return &Process{
-		RootPath:     rootpath,
-		Command:      command,
-		IssuedTime:   time.Now(),
-		GpuId:        gpuId,
-		ProcessState: Pending,
 	}
 }

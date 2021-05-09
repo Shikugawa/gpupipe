@@ -32,7 +32,7 @@ func (e *Server) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
 	}
 
-	if err := e.schedular.Publish(request.RootPath, request.Command, request.TargetGpu); err != nil {
+	if err := e.schedular.Publish(&request); err != nil {
 		http.Error(w, "Failed to publish process", http.StatusInternalServerError)
 	}
 

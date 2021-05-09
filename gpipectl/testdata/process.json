@@ -1,5 +1,16 @@
 {
   "rootpath": "/mnt/disk2/shimizu/PreSumm/src",
-  "command": ["python", "train.py"],
-  "target_gpu": [1, 2]
+  "command": [
+    "python", "train.py", "-mode", "train", "-accum_count", "5", "-batch_size", "300",
+    "-bert_data_path", "../bert_data_xsum_new/xsum", "-dec_dropout", "0.1", "-log_file", "../logs/cnndm_baseline",
+    "-lr", "0.05", "-model_path", "/mnt/disk2/shimizu/model_baseline_xsum/",
+    "-save_checkpoint_steps", "2000", "-seed", "777","-sep_optim", "false", "-train_steps", "200000",
+    "-use_bert_emb", "true", "-use_interval", "true", "-warmup_steps", "8000",
+    "-visible_gpus", "1,2", "-max_pos", "512", "-report_every", "50", "-enc_hidden_size", "512",
+    "-enc_layers", "6", "-enc_ff_size", "2048", "-enc_dropout", "0.1","-dec_layers", "6",
+    "-dec_hidden_size", "512", "-dec_ff_size", "2048", "-encoder", "baseline", "-task", "ext"
+  ],
+  "target_gpu": [1, 2],
+  "log_path": "/home/shimizu/go/src/github.com/Shikugawa/gpupipe/gpipectl/log/out.log",
+  "err_log_path": "/home/shimizu/go/src/github.com/Shikugawa/gpupipe/gpipectl/log/err.log"
 }

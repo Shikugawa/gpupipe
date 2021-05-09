@@ -14,8 +14,15 @@
 
 package scheduler
 
+import "github.com/Shikugawa/gpupipe/pkg/types"
+
 type Scheduler interface {
-	Publish(rootpath string, command []string, gpuId []int) error
+	Publish(r *types.ProcessPublishRequest) error
 	List() ([]byte, error)
 	Run()
+}
+
+type SchedulerCallback interface {
+	OnSuccess(id string)
+	OnError(id string)
 }
