@@ -30,17 +30,17 @@ import (
 )
 
 var (
-	maxPendingQueueSize     int16
-	gpuInfoRequestInterval  int16
-	memoryUsageLowWatermark int8
-	port                    int16
+	maxPendingQueueSize            int16
+	gpuInfoRequestInterval         int16
+	defaultMemoryUsageLowWatermark int8
+	port                           int16
 
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "run gpiped server",
 		Run: func(cmd *cobra.Command, args []string) {
 			sched := scheduler.NewScheduler(
-				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(memoryUsageLowWatermark), plugin.NewFifoPlugin())
+				int(maxPendingQueueSize), int(gpuInfoRequestInterval), int(defaultMemoryUsageLowWatermark), plugin.NewFifoPlugin())
 			go sched.Run()
 
 			srv := server.NewServer(sched).Start(strconv.Itoa(int(port)))
@@ -66,6 +66,6 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	runCmd.Flags().Int16VarP(&port, "port", "p", 8000, "server port")
 	runCmd.Flags().Int16VarP(&maxPendingQueueSize, "queue_size", "q", 10, "the number of pending queue limit")
-	runCmd.Flags().Int8VarP(&memoryUsageLowWatermark, "memory_usage_low_watermark", "m", 10, "low usage watermark whether to issue or not GPU task")
+	runCmd.Flags().Int8VarP(&defaultMemoryUsageLowWatermark, "default_memory_usage_low_watermark", "m", 10, "low usage watermark whether to issue or not GPU task")
 	runCmd.Flags().Int16VarP(&gpuInfoRequestInterval, "request_interval", "r", 5, "interval to request gpu usage for GPU watcher agent")
 }

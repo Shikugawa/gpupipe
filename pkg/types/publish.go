@@ -15,9 +15,10 @@
 package types
 
 type ProcessPublishRequest struct {
-	RootPath   string   `json:"rootpath"`
-	Command    []string `json:"command"`
-	TargetGpu  []int    `json:"target_gpu"`
-	LogPath    string   `json:"log_path"`
-	ErrLogPath string   `json:"err_log_path"`
+	RootPath                string   `json:"rootpath"`
+	Command                 []string `json:"command"`
+	TargetGpu               []int    `json:"target_gpu"`
+	LogPath                 string   `json:"log_path"`
+	ErrLogPath              string   `json:"err_log_path"`
+	MemoryUsageLowWatermark int      `json:"memory_usage_low_watermark"`
 }

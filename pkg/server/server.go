@@ -33,6 +33,14 @@ func (e *Server) handlePublish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode request body", http.StatusInternalServerError)
 	}
 
+	if request.MemoryUsageLowWatermark > 100 {
+		request.MemoryUsageLowWatermark = 100
+	}
+
+	if request.MemoryUsageLowWatermark < 0 {
+		request.MemoryUsageLowWatermark = 0
+	}
+
 	if err := e.schedular.Publish(&request); err != nil {
 		http.Error(w, "Failed to publish process", http.StatusInternalServerError)
 	}

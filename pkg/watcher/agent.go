@@ -22,22 +22,16 @@ import (
 )
 
 type Agent struct {
-	gpuInfoRequestInterval  time.Duration
-	memoryUsageLowWatermark int
+	gpuInfoRequestInterval time.Duration
 }
 
-func NewAgent(requestInterval, memoryUsageLowWatermark int) *Agent {
-	if memoryUsageLowWatermark > 100 {
-		memoryUsageLowWatermark = 100
-	}
-
+func NewAgent(requestInterval int) *Agent {
 	return &Agent{
-		gpuInfoRequestInterval:  time.Duration(requestInterval) * time.Second,
-		memoryUsageLowWatermark: memoryUsageLowWatermark,
+		gpuInfoRequestInterval: time.Duration(requestInterval) * time.Second,
 	}
 }
 
-func (w *Agent) Run(ch chan<- []int) {
+func (w *Agent) Run(ch chan<- []gpu.GpuInfo) {
 	for {
 		infos, err := gpu.GetGpuInfo()
 		if err != nil {
@@ -45,13 +39,7 @@ func (w *Agent) Run(ch chan<- []int) {
 			continue
 		}
 
-		var target []int
-		for _, info := range infos {
-			if info.MemoryUsage <= w.memoryUsageLowWatermark {
-				target = append(target, info.Index)
-			}
-		}
-		ch <- target
+		ch <- infos
 		time.Sleep(w.gpuInfoRequestInterval)
 	}
 }

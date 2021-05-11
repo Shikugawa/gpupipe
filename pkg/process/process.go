@@ -27,15 +27,16 @@ import (
 )
 
 type Process struct {
-	Id           string       `json:"id"`
-	Pid          int          `json:"pid"`
-	RootPath     string       `json:"rootpath"`
-	Command      []string     `json:"command"`
-	IssuedTime   time.Time    `json:"issued_time"`
-	GpuId        []int        `json:"gpu_id"`
-	ProcessState ProcessState `json:"process_state"`
-	LogPath      string       `json:"log_path"`
-	ErrLogPath   string       `json:"err_log_path"`
+	Id                      string       `json:"id"`
+	Pid                     int          `json:"pid"`
+	RootPath                string       `json:"rootpath"`
+	Command                 []string     `json:"command"`
+	IssuedTime              time.Time    `json:"issued_time"`
+	GpuId                   []int        `json:"gpu_id"`
+	ProcessState            ProcessState `json:"process_state"`
+	LogPath                 string       `json:"log_path"`
+	ErrLogPath              string       `json:"err_log_path"`
+	MemoryUsageLowWatermark int          `json:"memory_usage_low_watermark"`
 }
 
 func (p *Process) Spawn(ch *chan bool) {
@@ -97,13 +98,14 @@ func (p *Process) Terminate() error {
 
 func NewProcess(r *types.ProcessPublishRequest) *Process {
 	return &Process{
-		Id:           uuid.NewString(),
-		RootPath:     r.RootPath,
-		Command:      r.Command,
-		IssuedTime:   time.Now(),
-		GpuId:        r.TargetGpu,
-		ProcessState: Pending,
-		LogPath:      r.LogPath,
-		ErrLogPath:   r.ErrLogPath,
+		Id:                      uuid.NewString(),
+		RootPath:                r.RootPath,
+		Command:                 r.Command,
+		IssuedTime:              time.Now(),
+		GpuId:                   r.TargetGpu,
+		ProcessState:            Pending,
+		LogPath:                 r.LogPath,
+		ErrLogPath:              r.ErrLogPath,
+		MemoryUsageLowWatermark: r.MemoryUsageLowWatermark,
 	}
 }

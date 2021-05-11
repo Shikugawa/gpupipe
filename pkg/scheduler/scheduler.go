@@ -20,18 +20,20 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/Shikugawa/gpupipe/pkg/gpu"
 	"github.com/Shikugawa/gpupipe/pkg/process"
 	"github.com/Shikugawa/gpupipe/pkg/types"
 	"github.com/Shikugawa/gpupipe/pkg/watcher"
 )
 
 type Scheduler struct {
-	Queue               *list.List
-	Watcher             *watcher.Agent
-	TargetGpuId         chan []int
-	MaxPendingQueueSize int
-	ProcessEventHandler *ProcessEventHandler
-	SchedulePlugin      SchedulePlugin
+	Queue                          *list.List
+	Watcher                        *watcher.Agent
+	TargetGpuInfos                 chan []gpu.GpuInfo
+	MaxPendingQueueSize            int
+	ProcessEventHandler            *ProcessEventHandler
+	SchedulePlugin                 SchedulePlugin
+	defaultMemoryUsageLowWatermark int
 }
 
 func (s *Scheduler) Publish(r *types.ProcessPublishRequest) error {
@@ -89,7 +91,7 @@ func (s *Scheduler) terminateActiveProcess(p *process.Process) error {
 
 func (s *Scheduler) Run() {
 	for {
-		availableGpuIds := <-s.TargetGpuId
+		currentTargetGpuInfos := <-s.TargetGpuInfos
 		for e := s.Queue.Front(); e != nil; e = e.Next() {
 			queuedProcess := e.Value.(*process.Process)
 
@@ -101,12 +103,23 @@ func (s *Scheduler) Run() {
 			}
 
 			canSpawn := true
+
 			for _, requestGpuId := range queuedProcess.GpuId {
-				requestGpuIdAvailable := false
-				for _, availableGpuId := range availableGpuIds {
-					if availableGpuId == requestGpuId {
-						requestGpuIdAvailable = true
-						break
+				requestGpuIdAvailable := true
+
+				for _, gpuInfo := range currentTargetGpuInfos {
+					if requestGpuId == gpuInfo.Index {
+						memoryUsageLowWatermark := 0
+
+						if queuedProcess.MemoryUsageLowWatermark == 0 {
+							memoryUsageLowWatermark = s.defaultMemoryUsageLowWatermark
+						} else {
+							memoryUsageLowWatermark = queuedProcess.MemoryUsageLowWatermark
+						}
+						if memoryUsageLowWatermark < gpuInfo.MemoryUsage {
+							requestGpuIdAvailable = false
+							break
+						}
 					}
 				}
 
@@ -180,17 +193,26 @@ func (s *Scheduler) OnError(id string) {
 	}
 }
 
-func NewScheduler(maxPendingQueueSize, gpuInfoRequestInterval, memoryUsageLowWatermark int, plugin SchedulePlugin) *Scheduler {
-	targetGpuId := make(chan []int)
-	watcher := watcher.NewAgent(gpuInfoRequestInterval, memoryUsageLowWatermark)
-	go watcher.Run(targetGpuId)
+func NewScheduler(maxPendingQueueSize, gpuInfoRequestInterval, defaultMemoryUsageLowWatermark int, plugin SchedulePlugin) *Scheduler {
+	targetGpuInfos := make(chan []gpu.GpuInfo)
+	watcher := watcher.NewAgent(gpuInfoRequestInterval)
+	go watcher.Run(targetGpuInfos)
+
+	if defaultMemoryUsageLowWatermark > 100 {
+		defaultMemoryUsageLowWatermark = 100
+	}
+
+	if defaultMemoryUsageLowWatermark < 0 {
+		defaultMemoryUsageLowWatermark = 0
+	}
 
 	scheduler := Scheduler{
-		Queue:               list.New(),
-		Watcher:             watcher,
-		TargetGpuId:         targetGpuId,
-		MaxPendingQueueSize: maxPendingQueueSize,
-		SchedulePlugin:      plugin,
+		Queue:                          list.New(),
+		Watcher:                        watcher,
+		TargetGpuInfos:                 targetGpuInfos,
+		MaxPendingQueueSize:            maxPendingQueueSize,
+		SchedulePlugin:                 plugin,
+		defaultMemoryUsageLowWatermark: defaultMemoryUsageLowWatermark,
 	}
 
 	processEventHandler := NewProcessEventHandler(&scheduler)

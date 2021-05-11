@@ -12,5 +12,6 @@
   ],
   "target_gpu": [1, 2],
   "log_path": "/home/shimizu/go/src/github.com/Shikugawa/gpupipe/gpipectl/log/out.log",
-  "err_log_path": "/home/shimizu/go/src/github.com/Shikugawa/gpupipe/gpipectl/log/err.log"
+  "err_log_path": "/home/shimizu/go/src/github.com/Shikugawa/gpupipe/gpipectl/log/err.log",
+  "memory_usage_low_watermark": 10
 }
